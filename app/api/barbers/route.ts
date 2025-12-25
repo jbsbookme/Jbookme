@@ -1,10 +1,10 @@
+export const dynamic = 'force-dynamic';
+
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/auth-options';
 import { prisma } from '@/lib/db';
 import bcrypt from 'bcryptjs';
-
-export const dynamic = 'force-dynamic';
 
 // GET all active barbers with their ratings
 export async function GET() {

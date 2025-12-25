@@ -4,8 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/auth-options';
 import { prisma } from '@/lib/db';
-
-
+import bcrypt from 'bcryptjs';
 
 // GET single barber by ID
 export async function GET(
