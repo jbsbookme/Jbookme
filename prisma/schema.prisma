@@ -1,0 +1,633 @@
+generator client {
+    provider = "prisma-client-js"
+}
+
+datasource db {
+    provider = "postgresql"
+    url      = env("DATABASE_URL")
+}
+
+// NextAuth.js Models
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// Application Models
+enum Role {
+  ADMIN
+  BARBER
+  CLIENT
+}
+
+enum AppointmentStatus {
+  PENDING
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+enum PaymentMethod {
+  ZELLE
+  CASHAPP
+  PAYPAL
+  CASH
+  CREDIT_CARD
+}
+
+enum DayOfWeek {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+  SUNDAY
+}
+
+enum ExpenseCategory {
+  RENT
+  UTILITIES_WATER
+  UTILITIES_ELECTRICITY
+  SUPPLIES
+  MAINTENANCE
+  MARKETING
+  SALARIES
+  OTHER
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  OVERDUE
+}
+
+enum Gender {
+  MALE      // Masculino
+  FEMALE    // Femenino
+  BOTH      // Ambos (para barberos)
+  UNISEX    // Unisex (para servicios)
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  password      String?
+  role          Role      @default(CLIENT)
+  phone         String?
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts           Account[]
+  sessions           Session[]
+  barber             Barber?
+  appointmentsAsClient Appointment[] @relation("ClientAppointments")
+  reviewsGiven       Review[]      @relation("ClientReviews")
+  invoices           Invoice[]     @relation("InvoiceRecipient")
+  posts              Post[]        @relation("PostAuthor")
+  comments           Comment[]     @relation("CommentAuthor")
+  messagesSent       Message[]     @relation("MessagesSent")
+  messagesReceived   Message[]     @relation("MessagesReceived")
+
+  @@index([email])
+}
+
+model Barber {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  bio          String?  @db.Text
+  specialties  String?
+  hourlyRate   Float?
+  isActive     Boolean  @default(true)
+  profileImage String?
+  phone        String?
+  facebookUrl  String?
+  instagramUrl String?
+  twitterUrl   String?
+  tiktokUrl    String?
+  youtubeUrl   String?
+  whatsappUrl  String?
+  zelleEmail   String?  // Email for Zelle payments
+  zellePhone   String?  // Phone for Zelle payments
+  cashappTag   String?  // CashApp $cashtag (e.g., $username)
+  contactEmail String?  // Email personalizado del barbero (ej: adolfoboome@gmail.com)
+  gender       Gender   @default(BOTH) // Género que atiende: MALE, FEMALE, BOTH
+  rating       Float?   @default(5.0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  services       Service[]
+  appointments   Appointment[]
+  reviews        Review[]
+  availability   Availability[]
+  payments       BarberPayment[]
+  media          BarberMedia[]
+  daysOff        DayOff[]
+  posts          Post[]          // Posts donde el barbero fue etiquetado
+  galleryImages  GalleryImage[]  @relation("BarberGallery")
+  manualPayments ManualPayment[] // Pagos manuales registrados por el barbero
+
+  @@index([userId])
+  @@index([isActive])
+}
+
+model Service {
+  id          String   @id @default(cuid())
+  name        String
+  description String?  @db.Text
+  duration    Int      // Duration in minutes
+  price       Float
+  image       String?  // Service image URL
+  barberId    String?
+  gender      Gender   @default(UNISEX) // Para quién es el servicio: MALE, FEMALE, UNISEX
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  barber       Barber?       @relation(fields: [barberId], references: [id], onDelete: SetNull)
+  appointments Appointment[]
+
+  @@index([barberId])
+  @@index([isActive])
+  @@index([gender])
+}
+
+model Appointment {
+  id                   String            @id @default(cuid())
+  clientId             String
+  barberId             String
+  serviceId            String
+  date                 DateTime
+  time                 String
+  status               AppointmentStatus @default(PENDING)
+  paymentMethod        PaymentMethod?
+  paymentStatus        PaymentStatus     @default(PENDING) // Payment confirmation status
+  paymentReference     String?           // Optional payment reference/transaction ID
+  notes                String?           @db.Text
+  cancelledAt          DateTime?         // When the appointment was cancelled
+  cancellationReason   String?           @db.Text
+  notification24hSent  Boolean           @default(false) // 24 hours before notification
+  notification12hSent  Boolean           @default(false) // 12 hours before notification
+  notification2hSent   Boolean           @default(false) // 2 hours before notification
+  notification30mSent  Boolean           @default(false) // 30 minutes before notification
+  thankYouSent         Boolean           @default(false) // Thank you after completion
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
+
+  client   User      @relation("ClientAppointments", fields: [clientId], references: [id], onDelete: Cascade)
+  barber   Barber    @relation(fields: [barberId], references: [id], onDelete: Cascade)
+  service  Service   @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+  review   Review?
+  invoice  Invoice?
+  messages Message[] // Mensajes relacionados a esta cita
+
+  @@index([clientId])
+  @@index([barberId])
+  @@index([serviceId])
+  @@index([date])
+  @@index([status])
+}
+
+model Review {
+  id               String    @id @default(cuid())
+  appointmentId    String    @unique
+  clientId         String
+  barberId         String
+  rating           Int       // 1-5 stars
+  comment          String?   @db.Text
+  adminResponse    String?   @db.Text  // Admin response to the review
+  adminRespondedAt DateTime? // When admin responded
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  appointment Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  client      User        @relation("ClientReviews", fields: [clientId], references: [id], onDelete: Cascade)
+  barber      Barber      @relation(fields: [barberId], references: [id], onDelete: Cascade)
+
+  @@index([clientId])
+  @@index([barberId])
+  @@index([rating])
+}
+
+model Availability {
+  id        String    @id @default(cuid())
+  barberId  String
+  dayOfWeek DayOfWeek
+  startTime String
+  endTime   String
+  isAvailable Boolean @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  barber Barber @relation(fields: [barberId], references: [id], onDelete: Cascade)
+
+  @@unique([barberId, dayOfWeek])
+  @@index([barberId])
+}
+
+model Settings {
+  id        String   @id @default(cuid())
+  shopName  String   @default("Mi Barbería")
+  shopLogo  String?
+  address   String?
+  phone     String?
+  email     String?
+  qrCode    String?
+  latitude  Float?   // GPS coordinates for location
+  longitude Float?
+  // Social Media Links
+  facebook  String?
+  instagram String?
+  twitter   String?
+  tiktok    String?
+  youtube   String?
+  whatsapp  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model BarberPayment {
+  id          String        @id @default(cuid())
+  barberId    String
+  amount      Float
+  weekStart   DateTime      // Start of the week for this payment
+  weekEnd     DateTime      // End of the week for this payment
+  status      PaymentStatus @default(PENDING)
+  paidAt      DateTime?
+  notes       String?       @db.Text
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  barber  Barber   @relation(fields: [barberId], references: [id], onDelete: Cascade)
+  invoice Invoice?
+
+  @@index([barberId])
+  @@index([weekStart])
+  @@index([status])
+}
+
+model Expense {
+  id             String          @id @default(cuid())
+  category       ExpenseCategory
+  customCategory String?         // For "OTHER" category
+  amount         Float
+  description    String?         @db.Text
+  date           DateTime
+  notes          String?         @db.Text
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  @@index([category])
+  @@index([date])
+}
+
+model CustomExpenseCategory {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum MediaType {
+  PHOTO
+  VIDEO
+}
+
+model BarberMedia {
+  id                 String    @id @default(cuid())
+  barberId           String
+  cloud_storage_path String    // S3 path to the photo or video
+  isPublic           Boolean   @default(true) // Public files for portfolio
+  mediaType          MediaType @default(PHOTO)
+  title              String?
+  description        String?   @db.Text
+  isActive           Boolean   @default(true)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  barber Barber @relation(fields: [barberId], references: [id], onDelete: Cascade)
+
+  @@index([barberId])
+  @@index([isActive])
+}
+
+model DayOff {
+  id          String   @id @default(cuid())
+  barberId    String
+  date        DateTime // Specific day off
+  reason      String?  @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  barber Barber @relation(fields: [barberId], references: [id], onDelete: Cascade)
+
+  @@unique([barberId, date])
+  @@index([barberId])
+  @@index([date])
+}
+
+enum InvoiceType {
+  BARBER_PAYMENT // Factura para pago de barbero al admin
+  CLIENT_SERVICE // Factura de servicio para el cliente
+}
+
+model Invoice {
+  id              String      @id @default(cuid())
+  invoiceNumber   String      @unique // Número de factura único (ej: INV-2024-0001)
+  type            InvoiceType
+  
+  // Referencias opcionales
+  barberPaymentId String?     @unique // Si es factura de pago de barbero
+  appointmentId   String?     @unique // Si es factura de servicio a cliente
+  
+  // Información del emisor (la barbería)
+  issuerName      String
+  issuerAddress   String?
+  issuerPhone     String?
+  issuerEmail     String?
+  
+  // Información del destinatario
+  recipientId     String?     // Usuario (barbero o cliente) - opcional para facturas sin usuario registrado
+  recipientName   String
+  recipientEmail  String
+  recipientPhone  String?
+  
+  // Detalles financieros
+  amount          Float
+  description     String      @db.Text
+  items           Json?       // Array de items detallados
+  
+  // Fechas
+  issueDate       DateTime    @default(now())
+  dueDate         DateTime?   // Para facturas de pago de barberos
+  paidAt          DateTime?   // Cuando se pagó
+  
+  // Estado
+  isPaid          Boolean     @default(false)
+  
+  // PDF storage
+  pdfPath         String?     // Ruta al PDF generado
+  
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  
+  // Relaciones
+  barberPayment   BarberPayment? @relation(fields: [barberPaymentId], references: [id], onDelete: SetNull)
+  appointment     Appointment?   @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+  recipient       User?          @relation("InvoiceRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+  
+  @@index([invoiceNumber])
+  @@index([type])
+  @@index([recipientId])
+  @@index([issueDate])
+  @@index([isPaid])
+}
+
+model GalleryImage {
+  id                 String         @id @default(cuid())
+  cloud_storage_path String         // S3 path to the image
+  isPublic           Boolean        @default(true)
+  title              String
+  description        String?        @db.Text
+  order              Int            @default(0) // Para ordenar las imágenes
+  tags               String[]       // Etiquetas para categorizar (#Fade, #Clásico, etc.)
+  likes              Int            @default(0) // Contador de likes
+  gender             Gender         @default(UNISEX) // Para quién es el estilo: MALE, FEMALE, UNISEX
+  barberId           String?        // Barbero que realizó el trabajo (opcional)
+  barber             Barber?        @relation("BarberGallery", fields: [barberId], references: [id], onDelete: SetNull)
+  isActive           Boolean        @default(true)
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+
+  likedBy            GalleryLike[]  // Usuarios que dieron like
+
+  @@index([isActive])
+  @@index([order])
+  @@index([gender])
+  @@index([barberId])
+}
+
+model GalleryLike {
+  id        String   @id @default(cuid())
+  userId    String   // Usuario que dio like
+  imageId   String   // Imagen a la que dio like
+  createdAt DateTime @default(now())
+
+  image     GalleryImage @relation(fields: [imageId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, imageId]) // Un usuario solo puede dar like una vez a una imagen
+  @@index([userId])
+  @@index([imageId])
+}
+
+// Social Media Models
+
+enum PostStatus {
+  PENDING    // Esperando aprobación del admin
+  APPROVED   // Publicación aprobada y visible
+  REJECTED   // Publicación rechazada
+}
+
+enum PostType {
+  BARBER_WORK  // Trabajo de barbero (portfolio)
+  CLIENT_SHARE // Cliente compartiendo su corte
+}
+
+model Post {
+  id                 String     @id @default(cuid())
+  authorId           String     // Usuario que publicó (barbero o cliente)
+  authorType         Role       // BARBER o CLIENT
+  postType           PostType   // Tipo de publicación
+  cloud_storage_path String     // S3 path to the photo
+  isPublic           Boolean    @default(true)
+  caption            String?    @db.Text // Descripción de la foto
+  hashtags           String[]   // Hashtags (#Fade, #BeardTrim, etc.)
+  status             PostStatus @default(PENDING) // Estado de aprobación
+  likes              Int        @default(0) // Contador de likes
+  viewCount          Int        @default(0) // Contador de vistas
+  rejectionReason    String?    @db.Text // Razón si fue rechazada
+  barberId           String?    // Si es un cliente, puede etiquetar al barbero
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+
+  author   User      @relation("PostAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  barber   Barber?   @relation(fields: [barberId], references: [id], onDelete: SetNull)
+  comments Comment[]
+  likedBy  PostLike[]
+
+  @@index([authorId])
+  @@index([status])
+  @@index([postType])
+  @@index([barberId])
+  @@index([createdAt])
+}
+
+model PostLike {
+  id        String   @id @default(cuid())
+  userId    String   // Usuario que dio like
+  postId    String   // Post al que dio like
+  createdAt DateTime @default(now())
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, postId]) // Un usuario solo puede dar like una vez
+  @@index([userId])
+  @@index([postId])
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  postId    String   // Post al que pertenece el comentario
+  authorId  String   // Usuario que comentó
+  content   String   @db.Text // Contenido del comentario
+  parentId  String?  // Para respuestas a comentarios (threading)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  post     Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  author   User      @relation("CommentAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  parent   Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies  Comment[] @relation("CommentReplies")
+
+  @@index([postId])
+  @@index([authorId])
+  @@index([parentId])
+  @@index([createdAt])
+}
+
+enum NotificationType {
+  POST_APPROVED      // Tu publicación fue aprobada
+  POST_REJECTED      // Tu publicación fue rechazada
+  NEW_COMMENT        // Nuevo comentario en tu post
+  COMMENT_REPLY      // Respuesta a tu comentario
+  POST_LIKE          // Like en tu post
+  APPOINTMENT_REMINDER // Recordatorio de cita
+  NEW_REVIEW         // Nueva reseña recibida
+  NEW_MESSAGE        // Nuevo mensaje recibido
+}
+
+model Notification {
+  id         String           @id @default(cuid())
+  userId     String           // Usuario que recibe la notificación
+  type       NotificationType
+  title      String
+  message    String           @db.Text
+  link       String?          // URL a la que redirigir al hacer click
+  isRead     Boolean          @default(false)
+  postId     String?          // Si es relacionado a un post
+  commentId  String?          // Si es relacionado a un comentario
+  createdAt  DateTime         @default(now())
+
+  @@index([userId])
+  @@index([isRead])
+  @@index([createdAt])
+}
+
+// Messaging System
+model Message {
+  id                 String   @id @default(cuid())
+  senderId           String   // Usuario que envía el mensaje
+  recipientId        String   // Usuario que recibe el mensaje
+  appointmentId      String?  // Opcional: contexto de la cita
+  subject            String?  // Asunto del mensaje
+  content            String   @db.Text // Contenido del mensaje
+  isRead             Boolean  @default(false)
+  readAt             DateTime? // Cuándo se leyó
+  cloud_storage_path String?  // Opcional: adjunto de imagen
+  isPublic           Boolean  @default(false) // Para S3 signed URLs
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  sender      User         @relation("MessagesSent", fields: [senderId], references: [id], onDelete: Cascade)
+  recipient   User         @relation("MessagesReceived", fields: [recipientId], references: [id], onDelete: Cascade)
+  appointment Appointment? @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+
+  @@index([senderId])
+  @@index([recipientId])
+  @@index([appointmentId])
+  @@index([isRead])
+  @@index([createdAt])
+}
+
+// Push Notifications Subscriptions for PWA
+model PushSubscription {
+  id           String   @id @default(cuid())
+  userId       String   // Usuario que se suscribió
+  endpoint     String   @unique // Endpoint de la suscripción
+  p256dh       String   // Clave pública
+  auth         String   // Auth secret
+  userAgent    String?  // Info del dispositivo
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([userId])
+  @@index([endpoint])
+}
+
+// Manual Payments - Pagos ingresados manualmente por el barbero
+model ManualPayment {
+  id            String        @id @default(cuid())
+  barberId      String        // Barbero que registra el pago
+  amount        Float         // Monto del pago
+  paymentMethod PaymentMethod @default(CASH) // Método de pago
+  description   String?       @db.Text // Descripción del servicio/concepto
+  clientName    String?       // Nombre del cliente (opcional)
+  date          DateTime      @default(now()) // Fecha del pago
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  barber Barber @relation(fields: [barberId], references: [id], onDelete: Cascade)
+
+  @@index([barberId])
+  @@index([date])
+  @@index([paymentMethod])
+}
+
+// Invoice Item Templates - Plantillas de ítems para facturas
+model InvoiceItemTemplate {
+  id          String   @id @default(cuid())
+  description String   // Descripción del servicio/producto
+  price       Float    // Precio unitario predeterminado
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([description])
+}
