@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import {
@@ -11,7 +13,6 @@ import {
 import { AppointmentStatus } from '@prisma/client';
 import webpush from 'web-push';
 
-export const dynamic = 'force-dynamic';
 
 // Configure web-push with VAPID keys
 const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || '';
