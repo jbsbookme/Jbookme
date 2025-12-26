@@ -10,7 +10,7 @@ import { LanguageSelector } from '@/components/language-selector';
 import { useI18n } from '@/lib/i18n/i18n-context';
 
 export function DashboardNavbar() {
-  const { data: session } = useSession() || {};
+  const { data: session } = useSession();
   const { t } = useI18n();
 
   const handleLogout = async () => {
@@ -18,39 +18,50 @@ export function DashboardNavbar() {
   };
 
   return (
-    <nav className="sticky top-0 z-50 w-full border-b border-gray-800 bg-[#0a0a0a]/95 backdrop-blur supports-[backdrop-filter]:bg-[#0a0a0a]/60">
-      <div className="container mx-auto flex h-16 items-center justify-between px-4 max-w-7xl">
-        <Link href="/dashboard" className="flex items-center space-x-3">
-          <div className="relative w-10 h-10 rounded-lg overflow-hidden">
-            <Image 
-              src="/logo.png" 
-              alt="BookMe Logo" 
+    <nav className="sticky top-0 z-50 w-full border-b border-gray-800 bg-black/95 backdrop-blur">
+      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4">
+
+        {/* Logo */}
+        <Link href="/dashboard/cliente" className="flex items-center space-x-3">
+          <div className="relative h-9 w-9 overflow-hidden rounded-lg">
+            <Image
+              src="/logo.png"
+              alt="JBookMe Logo"
               fill
               className="object-contain"
               priority
             />
           </div>
           <span className="text-xl font-bold">
-            <span className="text-[#00f0ff]">Book</span>
-            <span className="text-[#ffd700]">Me</span>
+            <span className="text-cyan-400">J</span>
+            <span className="text-cyan-400">Book</span>
+            <span className="text-yellow-400">Me</span>
           </span>
         </Link>
 
-        <div className="flex items-center space-x-3 md:space-x-4">
+        {/* Right side */}
+        <div className="flex items-center gap-3">
           <NotificationsBell />
           <LanguageSelector />
-          <div className="hidden sm:flex items-center space-x-2 text-gray-300">
-            <User className="w-5 h-5" />
-            <span className="text-sm">{session?.user?.name || 'User'}</span>
+
+          <div className="hidden sm:flex items-center gap-2 text-gray-300">
+            <User className="h-4 w-4" />
+            <span className="text-sm">
+              {session?.user?.name || t('common.hello')}
+            </span>
           </div>
+
           <Button
-            variant="outline"
-            size="sm"
             onClick={handleLogout}
-            className="border-gray-700 text-white hover:bg-red-500/20 hover:border-red-500 hover:text-red-500"
+            size="sm"
+            className="
+              bg-red-600 text-white
+              hover:bg-red-700
+              active:bg-red-800
+            "
           >
-            <LogOut className="w-4 h-4 md:w-5 md:h-5 md:mr-2" />
-            <span className="hidden md:inline">{t('common.logout')}</span>
+            <LogOut className="mr-2 h-4 w-4" />
+            {t('nav.logout')}
           </Button>
         </div>
       </div>

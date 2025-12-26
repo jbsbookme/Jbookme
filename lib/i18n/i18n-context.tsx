@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 import { translations, Language } from './translations';
 
 type I18nContextType = {
@@ -12,50 +12,37 @@ type I18nContextType = {
 const I18nContext = createContext<I18nContextType | undefined>(undefined);
 
 export function I18nProvider({ children }: { children: React.ReactNode }) {
-  // Default to English
   const [language, setLanguageState] = useState<Language>('en');
 
-  // Load saved language from localStorage (defaults to English)
+  // Load saved language
   useEffect(() => {
     const saved = localStorage.getItem('bookme-language');
     if (saved === 'en' || saved === 'es') {
       setLanguageState(saved);
     } else {
-      // If no language is saved, set English as default
       localStorage.setItem('bookme-language', 'en');
       setLanguageState('en');
     }
   }, []);
 
-  // Save language to localStorage when it changes
+  // Save language
   const setLanguage = (lang: Language) => {
     setLanguageState(lang);
     localStorage.setItem('bookme-language', lang);
   };
 
-  // Translation function with nested key support
+  // Translation function (SAFE)
   const t = (key: string): string => {
-    const keys = key.split('.');
-    let value: any = translations[language];
+    const dict = translations[language] as Record<string, any>;
+    const value = key
+      .split('.')
+      .reduce((acc, part) => (acc ? acc[part] : undefined), dict);
 
-    for (const k of keys) {
-      if (value && typeof value === 'object' && k in value) {
-        value = value[k];
-      } else {
-        // Fallback to English if key not found
-        value = translations.en;
-        for (const fallbackKey of keys) {
-          if (value && typeof value === 'object' && fallbackKey in value) {
-            value = value[fallbackKey];
-          } else {
-            return key; // Return key itself if not found
-          }
-        }
-        return value;
-      }
-    }
+    // Hide missing / raw keys like "client.subtitle"
+    if (value === undefined || value === null) return '';
+    if (typeof value === 'string' && value.trim() === key) return '';
 
-    return typeof value === 'string' ? value : key;
+    return String(value);
   };
 
   return (

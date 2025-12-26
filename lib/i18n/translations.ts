@@ -40,6 +40,9 @@ export const translations = {
       login: 'Iniciar Sesión',
       logout: 'Cerrar Sesión',
       dashboard: 'Panel',
+      profile: 'Perfil',
+      menu: 'Menú',
+      post: 'Publicar',
     },
 
     assistant: {
@@ -130,6 +133,9 @@ export const translations = {
       login: 'Login',
       logout: 'Logout',
       dashboard: 'Dashboard',
+      post: 'Post',
+      profile: 'Profile',
+      menu: 'Menu',
     },
 
     assistant: {

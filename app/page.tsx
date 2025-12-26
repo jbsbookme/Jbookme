@@ -50,7 +50,7 @@ export default function HomePage() {
           transition={{ duration: 1, delay: 0.3 }}
           className="text-6xl md:text-8xl font-bold mb-6 bg-gradient-to-r from-[#00f0ff] via-[#ffd700] to-[#00f0ff] bg-clip-text text-transparent"
         >
-          BookMe
+          JBookMe
         </motion.h1>
 
         {/* Subtitle */}
@@ -60,7 +60,7 @@ export default function HomePage() {
           transition={{ duration: 1, delay: 0.6 }}
           className="text-xl md:text-2xl text-gray-300 mb-16 max-w-2xl mx-auto font-light"
         >
-          {t('home.subtitle')}
+          {t('Your experience starts here')}
         </motion.p>
 
         {/* "Enter" button with animation */}
@@ -75,7 +75,7 @@ export default function HomePage() {
             className="group relative px-12 py-8 text-2xl font-bold bg-gradient-to-r from-[#00f0ff] to-[#ffd700] text-black hover:shadow-[0_0_40px_rgba(0,240,255,0.8)] transition-all duration-300 overflow-hidden"
           >
             <span className="relative z-10 flex items-center gap-3">
-              {t('home.getStarted').toUpperCase()}
+              {t('Find Your Barber')}
               <ArrowRight className="w-7 h-7 group-hover:translate-x-2 transition-transform duration-300" />
             </span>
             
@@ -93,16 +93,16 @@ export default function HomePage() {
           </Button>
         </motion.div>
 
-        {/* Decorative text at bottom */}
-        <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 1, delay: 1.2 }}
-          className="mt-12 text-sm text-gray-500"
-        >
-          Press to start your experience
-        </motion.p>
+          {/* Decorative text at bottom */}
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 1, delay: 1.2 }}
+            className="mt-12 text-sm text-gray-500"
+          >
+
+          </motion.p>
+        </div>
       </div>
-    </div>
-  );
-}
+    );
+  }

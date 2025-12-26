@@ -22,21 +22,21 @@ export default function BottomNav() {
 
   const navItems = [
     {
-      name: t('common.home'),
+      name: t('nav.home'),
       icon: Home,
       href: session ? '/feed' : '/',
       active: pathname === '/feed' || pathname === '/',
       isCreate: false
     },
     {
-      name: t('common.explore'),
+      name: t('nav.explore'),
       icon: Sparkles,
       href: '/galeria',
       active: pathname === '/galeria',
       isCreate: false
     },
     {
-      name: 'AI',
+      name: t('nav.ai'),
       icon: Bot,
       href: '/asistente',
       active: pathname === '/asistente',
@@ -44,21 +44,21 @@ export default function BottomNav() {
       isAI: true
     },
     {
-      name: t('common.post'),
+      name: t('nav.post'),
       icon: Plus,
       href: session ? '/dashboard/cliente/publicar' : '/login',
       active: pathname === '/dashboard/cliente/publicar',
       isCreate: true
     },
     {
-      name: t('common.profile'),
+      name: t('nav.profile'),
       icon: User,
       href: session ? '/dashboard/cliente' : '/login',
       active: pathname === '/dashboard/cliente',
       isCreate: false
     },
     {
-      name: t('common.menu'),
+      name: t('nav.menu'),
       icon: Menu,
       href: '/menu',
       active: pathname === '/menu',
